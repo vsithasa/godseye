@@ -52,7 +52,7 @@ class APIClient:
         Returns:
             Hex-encoded HMAC signature
         """
-        canonical_message = f"{timestamp}\\n{nonce}\\n{body_hash}"
+        canonical_message = f"{timestamp}\n{nonce}\n{body_hash}"
         signature = hmac.new(
             secret.encode("utf-8"),
             canonical_message.encode("utf-8"),
