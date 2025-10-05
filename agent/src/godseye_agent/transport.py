@@ -247,7 +247,7 @@ class APIClient:
             method="POST",
             endpoint="/functions/v1/ingest",
             data=payload,
-            compress=True,
+            compress=False,  # Temporarily disabled compression
             sign=True,
         )
 
