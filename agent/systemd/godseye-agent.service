@@ -1,0 +1,22 @@
+[Unit]
+Description=Godseye monitoring agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/godseye-agent run
+Nice=10
+IOSchedulingClass=idle
+
+# Security hardening
+PrivateTmp=true
+NoNewPrivileges=true
+ReadOnlyPaths=/
+ReadWritePaths=/etc/godseye
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
+
