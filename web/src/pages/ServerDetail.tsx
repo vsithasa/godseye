@@ -279,19 +279,19 @@ export default function ServerDetail() {
                 <div class="space-y-4">
                   <For each={disks()}>
                     {(disk) => {
-                      const usedPct = (disk.used_bytes / disk.size_bytes) * 100;
+                      const usedPct = ((disk.used_bytes || 0) / (disk.size_bytes || 1)) * 100;
                       return (
                         <div>
                           <div class="flex items-center justify-between text-sm mb-2">
-                            <span class="text-white font-medium">{disk.mount} ({disk.fs})</span>
+                            <span class="text-white font-medium">{disk.mount || '-'} ({disk.fs || '-'})</span>
                             <span class="text-slate-400">
-                              {formatBytes(disk.used_bytes)} / {formatBytes(disk.size_bytes)} ({usedPct.toFixed(1)}%)
+                              {formatBytes(disk.used_bytes || 0)} / {formatBytes(disk.size_bytes || 0)} ({usedPct.toFixed(1)}%)
                             </span>
                           </div>
                           <div class="w-full bg-slate-700 rounded-full h-2">
                             <div 
                               class={`h-2 rounded-full ${usedPct > 90 ? 'bg-red-500' : usedPct > 70 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                              style={`width: ${usedPct}%`}
+                              style={`width: ${Math.min(usedPct, 100)}%`}
                             ></div>
                           </div>
                         </div>
@@ -321,11 +321,11 @@ export default function ServerDetail() {
                       <For each={network()}>
                         {(iface) => (
                           <tr class="border-b border-slate-700/50">
-                            <td class="py-2 text-white font-medium">{iface.name}</td>
+                            <td class="py-2 text-white font-medium">{iface.name || '-'}</td>
                             <td class="py-2 text-slate-400 font-mono text-xs">{iface.mac || '-'}</td>
                             <td class="py-2 text-slate-400">{iface.ipv4 || '-'}</td>
-                            <td class="py-2 text-slate-400">{formatBytes(iface.bytes_sent)}</td>
-                            <td class="py-2 text-slate-400">{formatBytes(iface.bytes_recv)}</td>
+                            <td class="py-2 text-slate-400">{formatBytes(iface.bytes_sent || 0)}</td>
+                            <td class="py-2 text-slate-400">{formatBytes(iface.bytes_recv || 0)}</td>
                           </tr>
                         )}
                       </For>
@@ -355,12 +355,12 @@ export default function ServerDetail() {
                       <For each={processes()}>
                         {(proc) => (
                           <tr class="border-b border-slate-700/50">
-                            <td class="py-2 text-slate-400">{proc.pid}</td>
-                            <td class="py-2 text-white font-medium">{proc.name}</td>
-                            <td class="py-2 text-slate-400">{proc.username}</td>
-                            <td class="py-2 text-slate-400">{proc.cpu_pct.toFixed(1)}%</td>
-                            <td class="py-2 text-slate-400">{proc.mem_pct.toFixed(1)}%</td>
-                            <td class="py-2 text-slate-500 text-xs truncate max-w-xs">{proc.cmdline}</td>
+                            <td class="py-2 text-slate-400">{proc.pid || 0}</td>
+                            <td class="py-2 text-white font-medium">{proc.name || '-'}</td>
+                            <td class="py-2 text-slate-400">{proc.username || '-'}</td>
+                            <td class="py-2 text-slate-400">{(proc.cpu_pct || 0).toFixed(1)}%</td>
+                            <td class="py-2 text-slate-400">{(proc.mem_pct || 0).toFixed(1)}%</td>
+                            <td class="py-2 text-slate-500 text-xs truncate max-w-xs">{proc.cmdline || '-'}</td>
                           </tr>
                         )}
                       </For>
@@ -379,7 +379,7 @@ export default function ServerDetail() {
                     <For each={packages()}>
                       {(pkg) => (
                         <div class="text-sm text-slate-400 font-mono">
-                          <span class="text-white">{pkg.name}</span> {pkg.version}
+                          <span class="text-white">{pkg.name || '-'}</span> {pkg.version || '-'}
                         </div>
                       )}
                     </For>
@@ -396,11 +396,13 @@ export default function ServerDetail() {
                   <For each={logs()}>
                     {(log) => (
                       <div class="text-xs font-mono">
-                        <span class="text-slate-500">{format(new Date(log.ts), 'MMM dd HH:mm:ss')}</span>
+                        <span class="text-slate-500">
+                          {log.ts ? format(new Date(log.ts), 'MMM dd HH:mm:ss') : '-'}
+                        </span>
                         {' '}
-                        <span class="text-blue-400">{log.unit}</span>
+                        <span class="text-blue-400">{log.unit || '-'}</span>
                         {' '}
-                        <span class="text-slate-300">{log.message}</span>
+                        <span class="text-slate-300">{log.message || '-'}</span>
                       </div>
                     )}
                   </For>
