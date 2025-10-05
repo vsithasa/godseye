@@ -194,7 +194,7 @@ Deno.serve(async (req: Request) => {
         cmd: proc.cmd,
         cpu_pct: proc.cpu_pct,
         mem_bytes: proc.mem_bytes,
-        usr: proc.user,
+        usr: proc.usr,
       }));
       await client.from("processes").insert(processRows);
     }

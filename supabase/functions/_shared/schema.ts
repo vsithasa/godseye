@@ -61,7 +61,7 @@ export const ProcessSchema = z.object({
   cmd: z.string(),
   cpu_pct: z.number().nonnegative(),
   mem_bytes: z.number().int().nonnegative(),
-  user: z.string(),
+  usr: z.string(),
 });
 
 // Package
