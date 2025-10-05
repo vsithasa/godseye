@@ -1,230 +1,183 @@
-# Godseye 👁️
+# Supabase CLI
 
-Fleet monitoring system for Ubuntu servers with zero-touch deployment.
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
+](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
 
-## Overview
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
-**Godseye** is a lightweight, secure fleet monitoring system that provides real-time visibility into your Ubuntu servers. Agents auto-register with a single command and send metrics directly to Supabase every 5 minutes.
+This repository contains all the functionality for Supabase CLI.
 
-### Key Features
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-- ✅ **Zero-touch enrollment** - One command to register servers
-- 🔒 **Secure by default** - HMAC signatures, JWT auth, replay protection
-- ⚡ **Real-time dashboard** - Live updates via Supabase Realtime
-- 📊 **Time-series analytics** - Efficient rollups for historical data
-- 🚨 **Smart alerting** - Offline detection, disk usage, high load, security updates
-- 🏗️ **No infrastructure** - Everything runs on Supabase
+## Getting started
 
-### What Gets Monitored
+### Install the CLI
 
-- System identity (hostname, OS, kernel, CPU, memory)
-- Heartbeats (uptime, load averages, CPU %, memory usage, swap)
-- Disks (mount points, usage, inodes)
-- Network interfaces (IPs, MACs, rx/tx bytes)
-- Top 30 processes by CPU/memory
-- Installed packages & available updates
-- Lightweight logs (optional)
-
----
-
-## Architecture
-
-```
-Python Agent (Ubuntu Server)
-    ↓ HTTPS + gzip + HMAC
-Supabase Edge Functions
-    ↓
-Supabase Postgres + Realtime
-    ↓
-Solid.js Web Dashboard
-```
-
-### Components
-
-1. **Python Agent** - Runs via systemd timer every 5 minutes
-2. **Supabase Database** - 14 tables with RLS, rollups, and indexes
-3. **Edge Functions** - `/enroll`, `/ingest`, `/rotate`, `/health`
-4. **Scheduled Jobs** - Offline detection, rollups, cleanup
-5. **Web Dashboard** - Real-time fleet view, server details, alerts
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- Supabase account and project
-- Ubuntu 20.04+ servers
-- Supabase CLI: `npm install -g supabase`
-
-### 1. Setup Database
-
-All migrations are already applied! ✅
-
-Tables created:
-- Core: `orgs`, `users`, `servers`
-- Metrics: `heartbeats`, `disks`, `network_ifaces`, `processes`
-- Operational: `packages`, `updates`, `logs`, `alerts`, `api_nonces`
-- Rollups: `heartbeats_rollup_1m`, `heartbeats_rollup_1h`
-
-### 2. Create Organization & Enrollment Secret
-
-```sql
--- Generate a random enrollment secret (save this!)
--- Example: use a password generator for 32+ chars
-
--- Hash and insert org
-INSERT INTO orgs (name, enroll_secret_hash)
-VALUES (
-  'My Organization',
-  encode(digest('your-secret-here-min-32-chars', 'sha256'), 'hex')
-);
-```
-
-### 3. Deploy Edge Functions
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
 ```bash
-cd supabase/functions
-
-# Set secrets
-supabase secrets set JWT_SECRET=$(openssl rand -hex 32)
-supabase secrets set CRON_SECRET=$(openssl rand -hex 32)
-
-# Deploy
-supabase functions deploy enroll
-supabase functions deploy ingest
-supabase functions deploy rotate
-supabase functions deploy health
-supabase functions deploy offline-detector
-supabase functions deploy rollup-builder
-supabase functions deploy nonce-cleanup
+npm i supabase --save-dev
 ```
 
-### 4. Setup Scheduled Jobs
-
-```sql
--- Enable pg_cron extension
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-
--- Offline detector (every 5 minutes)
-SELECT cron.schedule(
-  'offline-detector',
-  '*/5 * * * *',
-  $$SELECT net.http_post(
-    url:='https://vwfzujkqfplmvyljoiki.supabase.co/functions/v1/offline-detector',
-    headers:='{"Authorization": "Bearer YOUR_CRON_SECRET"}'::jsonb
-  ) AS request_id;$$
-);
-
--- Rollup builder (every 5 minutes)
-SELECT cron.schedule(
-  'rollup-builder',
-  '*/5 * * * *',
-  $$SELECT net.http_post(
-    url:='https://vwfzujkqfplmvyljoiki.supabase.co/functions/v1/rollup-builder',
-    headers:='{"Authorization": "Bearer YOUR_CRON_SECRET"}'::jsonb
-  ) AS request_id;$$
-);
-
--- Nonce cleanup (every 15 minutes)
-SELECT cron.schedule(
-  'nonce-cleanup',
-  '*/15 * * * *',
-  $$SELECT net.http_post(
-    url:='https://vwfzujkqfplmvyljoiki.supabase.co/functions/v1/nonce-cleanup',
-    headers:='{"Authorization": "Bearer YOUR_CRON_SECRET"}'::jsonb
-  ) AS request_id;$$
-);
-```
-
-### 5. Install Agent on Servers
+To install the beta release channel:
 
 ```bash
-# On each Ubuntu server:
-curl -fsSL https://your-domain/install.sh | sudo bash
-sudo rms-agent enroll --org-secret your-secret-here-min-32-chars
-
-# Agent will start collecting and sending metrics every 5 minutes
+npm i supabase@beta --save-dev
 ```
 
----
-
-## Project Structure
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
 
 ```
-godseye/
-├── docs/
-│   └── development_plan.md        # Full specification
-├── supabase/
-│   ├── config.toml                # Supabase config
-│   └── functions/                 # Edge Functions
-│       ├── _shared/               # Shared utilities
-│       │   ├── schema.ts          # Zod validation schemas
-│       │   ├── auth.ts            # JWT + HMAC utilities
-│       │   ├── db.ts              # Database helpers
-│       │   └── response.ts        # HTTP response helpers
-│       ├── enroll/                # Agent enrollment
-│       ├── ingest/                # Metrics ingestion
-│       ├── rotate/                # JWT rotation
-│       ├── health/                # Health check
-│       ├── offline-detector/      # Scheduled: offline alerts
-│       ├── rollup-builder/        # Scheduled: time-series rollups
-│       └── nonce-cleanup/         # Scheduled: cleanup old nonces
-├── agent/                         # Python agent (TODO)
-├── web/                           # Solid.js dashboard (TODO)
-└── README.md
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
 ```
 
----
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
 
-## Security
+<details>
+  <summary><b>macOS</b></summary>
 
-- **Transport**: HTTPS only
-- **Agent Auth**: Short-lived JWT (60 min) + HMAC-SHA256 signatures
-- **Replay Protection**: Nonce cache with 5-minute window
-- **Row-Level Security**: All data scoped by `org_id`
-- **Secrets**: Per-agent HMAC secrets, refresh tokens stored securely
-- **Rate Limiting**: Function-level rate limits (configure in Supabase)
+  Available via [Homebrew](https://brew.sh). To install:
 
----
+  ```sh
+  brew install supabase/tap/supabase
+  ```
 
-## Development Status
+  To install the beta release channel:
+  
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
 
-### ✅ Completed
-- [x] Database schema with RLS
-- [x] All Edge Functions
-- [x] Scheduled jobs (offline, rollups, cleanup)
-- [x] Security layer (JWT, HMAC, nonces)
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
 
-### 🚧 In Progress
-- [ ] Python agent
-- [ ] Web dashboard
-- [ ] Installation script
+<details>
+  <summary><b>Windows</b></summary>
 
-### 📋 Planned
-- [ ] Additional alerting rules (disk, load, updates)
-- [ ] CSV/JSON export
-- [ ] Multi-org admin panel
-- [ ] SSO integration
+  Available via [Scoop](https://scoop.sh). To install:
 
----
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
 
-## Documentation
+  To upgrade:
 
-- **Development Plan**: See `docs/development_plan.md` for full specification
-- **Edge Functions**: See `supabase/functions/README.md`
-- **Agent Setup**: Coming soon
-- **Web Dashboard**: Coming soon
+  ```powershell
+  scoop update supabase
+  ```
+</details>
 
----
+<details>
+  <summary><b>Linux</b></summary>
 
-## License
+  Available via [Homebrew](https://brew.sh) and Linux packages.
 
-MIT
+  #### via Homebrew
 
----
+  To install:
 
-## Support
+  ```sh
+  brew install supabase/tap/supabase
+  ```
 
-For issues, questions, or contributions, please open an issue on GitHub.
+  To upgrade:
 
+  ```sh
+  brew upgrade supabase
+  ```
+
+  #### via Linux packages
+
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
+
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
+
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
+
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
+
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
+
+<details>
+  <summary><b>Other Platforms</b></summary>
+
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
+
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
+
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
+
+```bash
+supabase bootstrap
+```
+
+Or using npx:
+
+```bash
+npx supabase bootstrap
+```
+
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
+
+## Docs
+
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+
+## Breaking changes
+
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+
+## Developing
+
+To run from source:
+
+```sh
+# Go >= 1.22
+go run . help
+```
