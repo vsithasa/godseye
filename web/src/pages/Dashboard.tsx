@@ -1,4 +1,5 @@
 import { createSignal, createEffect, For, Show, onCleanup } from 'solid-js';
+import { A } from '@solidjs/router';
 import { supabase, type Server, type Heartbeat } from '../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -194,7 +195,7 @@ export default function Dashboard() {
                   const heartbeat = () => heartbeats().get(server.id);
 
                   return (
-                    <div class="bg-slate-800 rounded-lg p-6 border border-slate-700 hover:border-slate-600 transition-colors">
+                    <A href={`/server/${server.id}`} class="block bg-slate-800 rounded-lg p-6 border border-slate-700 hover:border-slate-600 hover:shadow-lg transition-all cursor-pointer">
                       {/* Server Header */}
                       <div class="flex items-start justify-between mb-4">
                         <div class="flex-1">
@@ -256,7 +257,7 @@ export default function Dashboard() {
                           Last seen {formatDistanceToNow(new Date(server.last_seen), { addSuffix: true })}
                         </span>
                       </div>
-                    </div>
+                    </A>
                   );
                 }}
               </For>

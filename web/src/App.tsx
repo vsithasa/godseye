@@ -3,6 +3,7 @@ import { Router, Route } from '@solidjs/router';
 import { supabase } from './lib/supabase';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import ServerDetail from './pages/ServerDetail';
 
 function App() {
   const [session, setSession] = createSignal<any>(null);
@@ -37,6 +38,7 @@ function App() {
       >
         <Router>
           <Route path="/" component={Dashboard} />
+          <Route path="/server/:id" component={ServerDetail} />
         </Router>
       </Show>
     </Show>
