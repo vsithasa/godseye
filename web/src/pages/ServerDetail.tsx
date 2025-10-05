@@ -8,6 +8,8 @@ import { Chart, Title, Tooltip, Legend, Colors, LineElement, PointElement, Linea
 // Register Chart.js components
 Chart.register(Title, Tooltip, Legend, Colors, LineElement, PointElement, LinearScale, CategoryScale, Filler);
 
+type TimeRange = 'today' | 'yesterday' | '7days' | '30days';
+
 export default function ServerDetail() {
   const params = useParams();
   const [server, setServer] = createSignal<Server | null>(null);
@@ -18,6 +20,33 @@ export default function ServerDetail() {
   const [packages, setPackages] = createSignal<any[]>([]);
   const [logs, setLogs] = createSignal<Log[]>([]);
   const [loading, setLoading] = createSignal(true);
+  const [timeRange, setTimeRange] = createSignal<TimeRange>('today');
+
+  // Calculate time range
+  const getTimeRangeParams = () => {
+    const now = new Date();
+    const range = timeRange();
+    
+    switch (range) {
+      case 'today': {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return { start, limit: 288 }; // ~5 min intervals
+      }
+      case 'yesterday': {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return { start, end, limit: 288 };
+      }
+      case '7days': {
+        const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return { start, limit: 2016 }; // ~5 min intervals
+      }
+      case '30days': {
+        const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        return { start, limit: 8640 }; // ~5 min intervals
+      }
+    }
+  };
 
   // Load data
   createEffect(async () => {
@@ -34,15 +63,21 @@ export default function ServerDetail() {
         .single();
       setServer(serverData);
 
-      // Load last 24h of heartbeats
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data: heartbeatsData } = await supabase
+      // Load heartbeats based on selected time range
+      const { start, end, limit } = getTimeRangeParams();
+      let query = supabase
         .from('heartbeats')
         .select('*')
         .eq('server_id', serverId)
-        .gte('ts', oneDayAgo)
+        .gte('ts', start.toISOString());
+      
+      if (end) {
+        query = query.lt('ts', end.toISOString());
+      }
+      
+      const { data: heartbeatsData } = await query
         .order('ts', { ascending: true })
-        .limit(288); // ~5 min intervals for 24h
+        .limit(limit);
       setHeartbeats(heartbeatsData || []);
 
       // Load disks
@@ -116,12 +151,26 @@ export default function ServerDetail() {
   };
 
   // Chart data
+  // Get display name for time range
+  const getTimeRangeLabel = () => {
+    switch (timeRange()) {
+      case 'today': return 'Today';
+      case 'yesterday': return 'Yesterday';
+      case '7days': return 'Last 7 Days';
+      case '30days': return 'Last 30 Days';
+    }
+  };
+
   const cpuChartData = () => {
     const hbs = heartbeats();
     if (hbs.length === 0) return null;
 
+    // Format labels based on time range
+    const range = timeRange();
+    const formatStr = (range === '7days' || range === '30days') ? 'MMM dd' : 'HH:mm';
+
     return {
-      labels: hbs.map(h => format(new Date(h.ts), 'HH:mm')),
+      labels: hbs.map(h => format(new Date(h.ts), formatStr)),
       datasets: [{
         label: 'CPU Usage (%)',
         data: hbs.map(h => h.cpu_pct || 0),
@@ -137,9 +186,13 @@ export default function ServerDetail() {
     const hbs = heartbeats();
     if (hbs.length === 0) return null;
 
+    // Format labels based on time range
+    const range = timeRange();
+    const formatStr = (range === '7days' || range === '30days') ? 'MMM dd' : 'HH:mm';
+
     const serverMem = server()?.mem_bytes || 1;
     return {
-      labels: hbs.map(h => format(new Date(h.ts), 'HH:mm')),
+      labels: hbs.map(h => format(new Date(h.ts), formatStr)),
       datasets: [{
         label: 'Memory Usage (%)',
         data: hbs.map(h => ((h.mem_used || 0) / serverMem) * 100),
@@ -245,11 +298,25 @@ export default function ServerDetail() {
               )}
             </Show>
 
+            {/* Time Range Selector */}
+            <div class="flex justify-end">
+              <select
+                class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={timeRange()}
+                onChange={(e) => setTimeRange(e.currentTarget.value as TimeRange)}
+              >
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="7days">Last 7 Days</option>
+                <option value="30days">Last 30 Days</option>
+              </select>
+            </div>
+
             {/* Charts */}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* CPU Chart */}
               <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <h2 class="text-lg font-semibold text-white mb-4">CPU Usage (24h)</h2>
+                <h2 class="text-lg font-semibold text-white mb-4">CPU Usage ({getTimeRangeLabel()})</h2>
                 <Show when={cpuChartData()} fallback={<div class="text-slate-500 text-sm">No data available</div>}>
                   {(data) => (
                     <div class="h-64">
@@ -261,7 +328,7 @@ export default function ServerDetail() {
 
               {/* Memory Chart */}
               <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <h2 class="text-lg font-semibold text-white mb-4">Memory Usage (24h)</h2>
+                <h2 class="text-lg font-semibold text-white mb-4">Memory Usage ({getTimeRangeLabel()})</h2>
                 <Show when={memoryChartData()} fallback={<div class="text-slate-500 text-sm">No data available</div>}>
                   {(data) => (
                     <div class="h-64">
