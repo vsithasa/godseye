@@ -1,6 +1,6 @@
 import { createSignal, createEffect, For, Show, onMount } from 'solid-js';
 import { useParams, A } from '@solidjs/router';
-import { supabase, type Server, type Heartbeat, type Disk, type NetworkInterface, type Process } from '../lib/supabase';
+import { supabase, type Server, type Heartbeat, type Disk, type NetworkInterface, type Process, type Log } from '../lib/supabase';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Line } from 'solid-chartjs';
 import { Chart, Title, Tooltip, Legend, Colors, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
@@ -16,7 +16,7 @@ export default function ServerDetail() {
   const [network, setNetwork] = createSignal<NetworkInterface[]>([]);
   const [processes, setProcesses] = createSignal<Process[]>([]);
   const [packages, setPackages] = createSignal<any[]>([]);
-  const [logs, setLogs] = createSignal<any[]>([]);
+  const [logs, setLogs] = createSignal<Log[]>([]);
   const [loading, setLoading] = createSignal(true);
 
   // Load data
@@ -344,25 +344,26 @@ export default function ServerDetail() {
                     <thead>
                       <tr class="text-left text-slate-400 border-b border-slate-700">
                         <th class="pb-2">PID</th>
-                        <th class="pb-2">Name</th>
                         <th class="pb-2">User</th>
                         <th class="pb-2">CPU %</th>
-                        <th class="pb-2">Memory %</th>
+                        <th class="pb-2">Memory</th>
                         <th class="pb-2">Command</th>
                       </tr>
                     </thead>
                     <tbody>
                       <For each={processes()}>
-                        {(proc) => (
-                          <tr class="border-b border-slate-700/50">
-                            <td class="py-2 text-slate-400">{proc.pid || 0}</td>
-                            <td class="py-2 text-white font-medium">{proc.name || '-'}</td>
-                            <td class="py-2 text-slate-400">{proc.username || '-'}</td>
-                            <td class="py-2 text-slate-400">{(proc.cpu_pct || 0).toFixed(1)}%</td>
-                            <td class="py-2 text-slate-400">{(proc.mem_pct || 0).toFixed(1)}%</td>
-                            <td class="py-2 text-slate-500 text-xs truncate max-w-xs">{proc.cmdline || '-'}</td>
-                          </tr>
-                        )}
+                        {(proc) => {
+                          const memPct = server() ? ((proc.mem_bytes || 0) / (server()!.mem_bytes || 1)) * 100 : 0;
+                          return (
+                            <tr class="border-b border-slate-700/50">
+                              <td class="py-2 text-slate-400">{proc.pid || 0}</td>
+                              <td class="py-2 text-slate-400">{proc.usr || '-'}</td>
+                              <td class="py-2 text-slate-400">{(proc.cpu_pct || 0).toFixed(1)}%</td>
+                              <td class="py-2 text-slate-400">{formatBytes(proc.mem_bytes || 0)} ({memPct.toFixed(1)}%)</td>
+                              <td class="py-2 text-slate-500 text-xs truncate max-w-md">{proc.cmd || '-'}</td>
+                            </tr>
+                          );
+                        }}
                       </For>
                     </tbody>
                   </table>
@@ -391,7 +392,11 @@ export default function ServerDetail() {
             {/* Logs */}
             <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
               <h2 class="text-lg font-semibold text-white mb-4">Recent Logs</h2>
-              <Show when={logs().length > 0} fallback={<div class="text-slate-500 text-sm">No log data</div>}>
+              <Show when={logs().length > 0} fallback={
+                <div class="text-slate-500 text-sm">
+                  No log data (log collection is disabled by default in agent config)
+                </div>
+              }>
                 <div class="max-h-96 overflow-y-auto space-y-2">
                   <For each={logs()}>
                     {(log) => (
@@ -400,7 +405,11 @@ export default function ServerDetail() {
                           {log.ts ? format(new Date(log.ts), 'MMM dd HH:mm:ss') : '-'}
                         </span>
                         {' '}
-                        <span class="text-blue-400">{log.unit || '-'}</span>
+                        <span class={`font-semibold ${
+                          log.level === 'error' ? 'text-red-400' : 
+                          log.level === 'warning' ? 'text-yellow-400' : 
+                          'text-blue-400'
+                        }`}>{log.source || '-'}</span>
                         {' '}
                         <span class="text-slate-300">{log.message || '-'}</span>
                       </div>

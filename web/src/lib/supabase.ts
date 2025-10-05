@@ -66,10 +66,18 @@ export interface Process {
   server_id: string;
   ts: string;
   pid: number;
-  name: string;
-  username: string;
+  cmd: string;
   cpu_pct: number;
-  mem_pct: number;
-  cmdline: string;
+  mem_bytes: number;
+  usr: string;
 }
 
+export interface Log {
+  id: string;
+  server_id: string;
+  ts: string;
+  source: string;
+  level: string;
+  message: string;
+  raw: any;
+}
