@@ -1,5 +1,5 @@
 import { createSignal, createEffect, For, Show, onCleanup } from 'solid-js';
-import { supabase, Server, Heartbeat } from '../lib/supabase';
+import { supabase, type Server, type Heartbeat } from '../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function Dashboard() {
@@ -221,25 +221,31 @@ export default function Dashboard() {
                           <span class="text-slate-400">Memory</span>
                           <span class="text-white font-medium">{formatBytes(server.mem_bytes)}</span>
                         </div>
-                        <Show when={heartbeat()}>
-                          <div class="flex items-center justify-between text-sm">
-                            <span class="text-slate-400">Uptime</span>
-                            <span class="text-white font-medium">{formatUptime(heartbeat()!.uptime_s)}</span>
-                          </div>
-                          <div class="flex items-center justify-between text-sm">
-                            <span class="text-slate-400">CPU Usage</span>
-                            <span class="text-white font-medium">{heartbeat()!.cpu_pct.toFixed(1)}%</span>
-                          </div>
-                          <div class="flex items-center justify-between text-sm">
-                            <span class="text-slate-400">Memory Used</span>
-                            <span class="text-white font-medium">{formatBytes(heartbeat()!.mem_used)}</span>
-                          </div>
-                          <div class="flex items-center justify-between text-sm">
-                            <span class="text-slate-400">Load Avg</span>
-                            <span class="text-white font-medium">
-                              {heartbeat()!.load_m1.toFixed(2)} / {heartbeat()!.load_m5.toFixed(2)} / {heartbeat()!.load_m15.toFixed(2)}
-                            </span>
-                          </div>
+                        <Show when={heartbeat()} fallback={
+                          <div class="text-sm text-slate-500 italic">Waiting for heartbeat...</div>
+                        }>
+                          {(hb) => (
+                            <>
+                              <div class="flex items-center justify-between text-sm">
+                                <span class="text-slate-400">Uptime</span>
+                                <span class="text-white font-medium">{formatUptime(hb().uptime_s || 0)}</span>
+                              </div>
+                              <div class="flex items-center justify-between text-sm">
+                                <span class="text-slate-400">CPU Usage</span>
+                                <span class="text-white font-medium">{(hb().cpu_pct || 0).toFixed(1)}%</span>
+                              </div>
+                              <div class="flex items-center justify-between text-sm">
+                                <span class="text-slate-400">Memory Used</span>
+                                <span class="text-white font-medium">{formatBytes(hb().mem_used || 0)}</span>
+                              </div>
+                              <div class="flex items-center justify-between text-sm">
+                                <span class="text-slate-400">Load Avg</span>
+                                <span class="text-white font-medium">
+                                  {(hb().load_m1 || 0).toFixed(2)} / {(hb().load_m5 || 0).toFixed(2)} / {(hb().load_m15 || 0).toFixed(2)}
+                                </span>
+                              </div>
+                            </>
+                          )}
                         </Show>
                       </div>
 
