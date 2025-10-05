@@ -104,7 +104,7 @@ class APIClient:
 
         # Add authentication headers if credentials are available
         if sign and self.credentials:
-            timestamp = datetime.now(timezone.utc).isoformat()
+            timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
             nonce = secrets.token_hex(16)
             body_hash = self._hash_body(body_for_hash) if body_for_hash else ""
 
