@@ -88,7 +88,7 @@ class APIClient:
         url = urljoin(self.api_url, endpoint)
         
         # Supabase anon key - required for all Edge Function requests
-        SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3Znp1amtxZnBsbXZ5bGpvaWtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjc2OTU4MjQsImV4cCI6MjA0MzI3MTgyNH0.Wl9P-U4p4nGHjIGvLt5LjKiOEzXh3R-hn8RHq7wUTSg"
+        SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3Znp1amtxZnBsbXZ5bGpvaWtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2MzM4ODIsImV4cCI6MjA3NTIwOTg4Mn0.959TqMgrw2Er45ATnPjuG_9kdIgLXgp6ki8aa45PF4o"
         
         headers = {
             "Content-Type": "application/json",
