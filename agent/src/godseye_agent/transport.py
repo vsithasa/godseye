@@ -92,8 +92,11 @@ class APIClient:
         }
 
         body = None
+        body_for_hash = b""  # Uncompressed body for HMAC signature
+        
         if data:
             body = json.dumps(data).encode("utf-8")
+            body_for_hash = body  # Hash the uncompressed body
 
             if compress:
                 body = gzip.compress(body)
@@ -103,7 +106,7 @@ class APIClient:
         if sign and self.credentials:
             timestamp = datetime.now(timezone.utc).isoformat()
             nonce = secrets.token_hex(16)
-            body_hash = self._hash_body(body) if body else ""
+            body_hash = self._hash_body(body_for_hash) if body_for_hash else ""
 
             signature = self._compute_hmac(
                 self.credentials.hmac_secret,
