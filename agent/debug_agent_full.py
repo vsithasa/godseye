@@ -14,28 +14,32 @@ original_file = None
 def debug_hmac_calculation():
     """Run the agent's send_metrics but with debug output"""
     import json
-    from godseye_agent.config import Config
-    from godseye_agent.credentials import Credentials
+    from godseye_agent.config import ConfigManager
+    from godseye_agent.credentials import CredentialsManager
     from godseye_agent import collectors
+    from godseye_agent import __version__
     
     # Load config and credentials
-    config = Config.load()
-    credentials = Credentials.load()
+    config_mgr = ConfigManager()
+    creds_mgr = CredentialsManager()
+    
+    config = config_mgr.load()
+    credentials = creds_mgr.load()
     
     print(f"✓ Loaded credentials")
     print(f"  HMAC Secret: {credentials.hmac_secret[:10]}...")
-    print(f"  JWT expires: checking...")
+    print(f"  Agent ID: {credentials.agent_id}")
     
     # Collect metrics (same as agent does)
     print("\n✓ Collecting metrics...")
     payload = {
-        "server": collectors.identity.collect(config),
-        "heartbeat": collectors.heartbeat.collect(),
-        "disks": collectors.disks.collect(),
-        "network_ifaces": collectors.network.collect(),
-        "processes": collectors.processes.collect(config),
-        "packages": collectors.packages.collect(),
-        "logs": collectors.logs.collect(config),
+        "server": collectors.collect_identity(__version__),
+        "heartbeat": collectors.collect_heartbeat(),
+        "disks": collectors.collect_disks(),
+        "network_ifaces": collectors.collect_network_interfaces(),
+        "processes": collectors.collect_processes(config.process_limit),
+        "packages": collectors.collect_packages(),
+        "logs": collectors.collect_logs(config.enable_logs, config.log_lines) if config.enable_logs else [],
     }
     
     # Serialize body
@@ -80,7 +84,7 @@ def debug_hmac_calculation():
         'X-Timestamp': timestamp,
         'X-Nonce': nonce,
         'X-Signature': signature,
-        'X-Agent-Version': config.agent_version,
+        'X-Agent-Version': __version__,
     }
     
     print(f"\n✓ Sending to {url}")
