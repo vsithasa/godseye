@@ -89,6 +89,8 @@ class APIClient:
         headers = {
             "Content-Type": "application/json",
             "User-Agent": f"godseye-agent/0.1.0",
+            # Supabase requires the anon key for all Edge Function requests
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3Znp1amtxZnBsbXZ5bGpvaWtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjc2OTU4MjQsImV4cCI6MjA0MzI3MTgyNH0.Wl9P-U4p4nGHjIGvLt5LjKiOEzXh3R-hn8RHq7wUTSg",
         }
 
         body = None
@@ -216,11 +218,6 @@ class APIClient:
             compress=False,
             sign=False,  # Enrollment doesn't require signing
         )
-        
-        # Add Supabase anon key for public endpoint access
-        # This key should be provided via environment variable or config
-        # For now, we'll need to fetch it from the API URL metadata
-        headers["apikey"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3Znp1amtxZnBsbXZ5bGpvaWtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjc2OTU4MjQsImV4cCI6MjA0MzI3MTgyNH0.Wl9P-U4p4nGHjIGvLt5LjKiOEzXh3R-hn8RHq7wUTSg"
 
         response_data = self._execute_request("POST", url, headers, body)
 
@@ -281,9 +278,6 @@ class APIClient:
             compress=False,
             sign=False,  # Rotation uses refresh token, not HMAC
         )
-        
-        # Add Supabase anon key for public endpoint access
-        headers["apikey"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3Znp1amtxZnBsbXZ5bGpvaWtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjc2OTU4MjQsImV4cCI6MjA0MzI3MTgyNH0.Wl9P-U4p4nGHjIGvLt5LjKiOEzXh3R-hn8RHq7wUTSg"
 
         response_data = self._execute_request("POST", url, headers, body)
 
