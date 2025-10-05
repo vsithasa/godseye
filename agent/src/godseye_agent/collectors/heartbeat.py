@@ -13,8 +13,8 @@ def collect_heartbeat() -> Dict[str, Any]:
 
     Returns uptime, load averages, CPU%, and memory usage.
     """
-    # Get current timestamp
-    timestamp = datetime.now(timezone.utc).isoformat()
+    # Get current timestamp in ISO 8601 format with Z suffix
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
     # Get uptime
     boot_time = psutil.boot_time()

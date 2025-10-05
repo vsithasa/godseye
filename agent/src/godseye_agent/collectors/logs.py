@@ -40,7 +40,7 @@ def collect_logs(lines: int = 200) -> List[Dict[str, Any]]:
 
                 # Extract relevant fields
                 timestamp_us = int(entry.get("__REALTIME_TIMESTAMP", 0))
-                timestamp = datetime.fromtimestamp(timestamp_us / 1000000, tz=timezone.utc).isoformat()
+                timestamp = datetime.fromtimestamp(timestamp_us / 1000000, tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
                 # Map systemd priority to level
                 priority = int(entry.get("PRIORITY", 6))
