@@ -1,7 +1,7 @@
-import { createSignal, createEffect, For, Show, onMount } from 'solid-js';
+import { createSignal, createEffect, For, Show } from 'solid-js';
 import { useParams, A } from '@solidjs/router';
 import { supabase, type Server, type Heartbeat, type Disk, type NetworkInterface, type Process, type Log } from '../lib/supabase';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import { Line } from 'solid-chartjs';
 import { Chart, Title, Tooltip, Legend, Colors, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 
@@ -53,6 +53,9 @@ export default function ServerDetail() {
     const serverId = params.id;
     if (!serverId) return;
 
+    // Track timeRange() to re-run effect when it changes
+    const currentTimeRange = timeRange();
+
     setLoading(true);
     try {
       // Load server info
@@ -80,19 +83,45 @@ export default function ServerDetail() {
         .limit(limit);
       setHeartbeats(heartbeatsData || []);
 
-      // Load disks
-      const { data: disksData } = await supabase
+      // Load most recent disks - get latest timestamp first
+      const { data: latestDiskData } = await supabase
         .from('disks')
-        .select('*')
-        .eq('server_id', serverId);
-      setDisks(disksData || []);
+        .select('ts')
+        .eq('server_id', serverId)
+        .order('ts', { ascending: false })
+        .limit(1);
+      
+      if (latestDiskData && latestDiskData.length > 0) {
+        const latestDiskTs = latestDiskData[0].ts;
+        const { data: disksData } = await supabase
+          .from('disks')
+          .select('*')
+          .eq('server_id', serverId)
+          .eq('ts', latestDiskTs);
+        setDisks(disksData || []);
+      } else {
+        setDisks([]);
+      }
 
-      // Load network interfaces
-      const { data: networkData } = await supabase
+      // Load most recent network interfaces - get latest timestamp first
+      const { data: latestNetworkData } = await supabase
         .from('network_ifaces')
-        .select('*')
-        .eq('server_id', serverId);
-      setNetwork(networkData || []);
+        .select('ts')
+        .eq('server_id', serverId)
+        .order('ts', { ascending: false })
+        .limit(1);
+      
+      if (latestNetworkData && latestNetworkData.length > 0) {
+        const latestNetworkTs = latestNetworkData[0].ts;
+        const { data: networkData } = await supabase
+          .from('network_ifaces')
+          .select('*')
+          .eq('server_id', serverId)
+          .eq('ts', latestNetworkTs);
+        setNetwork(networkData || []);
+      } else {
+        setNetwork([]);
+      }
 
       // Load recent processes
       const { data: processesData } = await supabase
